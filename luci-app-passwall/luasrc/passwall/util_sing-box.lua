@@ -1810,18 +1810,7 @@ function gen_config(var)
 		end
 	end
 
-	table.insert(route.rules, {
-		action = "route",
-		ip_is_private = true,
-		outbound = "direct"
-	})
-
 	if COMMON.default_outbound_tag then
-		table.insert(route.rules, {
-			action = "route",
-			port_range = { "0:65535" },
-			outbound = COMMON.default_outbound_tag
-		})
 		route.final = COMMON.default_outbound_tag
 	end
 
@@ -2063,7 +2052,9 @@ function gen_config(var)
 								fakedns_dns_rule.query_type = { "A", "AAAA" }
 							end
 							fakedns_dns_rule.server = fakedns_tag
+							fakedns_dns_rule.rewrite_ttl = 1
 							fakedns_dns_rule.disable_cache = true
+							fakedns_dns_rule.client_subnet = nil
 							table.insert(dns.rules, fakedns_dns_rule)
 						end
 					end
@@ -2098,7 +2089,7 @@ function gen_config(var)
 					query_type = dns_rule_query_type,
 					server = fakedns_tag,
 					disable_cache = true,
-					rewrite_ttl = 30
+					rewrite_ttl = 1
 				}
 				table.insert(dns.rules, fakedns_dns_rule)
 			end
