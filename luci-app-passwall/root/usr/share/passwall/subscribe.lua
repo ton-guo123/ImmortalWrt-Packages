@@ -1779,6 +1779,9 @@ local function curl(url, file, ua, mode)
 	ua = (ua == "passwall") and ("passwall/" .. api.get_version()) or ua
 	curl_args[#curl_args + 1] = '--user-agent "' .. ua .. '"'
 
+	local cookie_file = "/tmp/cookie_" .. api.gen_random_char(5)
+	curl_args[#curl_args + 1] = '-c "' .. cookie_file .. '" -b "' .. cookie_file .. '"'
+
 	local return_code, result
 	if mode == "direct" then
 		return_code, result = api.curl_base(url, file, curl_args)
@@ -1800,6 +1803,8 @@ local function curl(url, file, ua, mode)
 	if header_str ~= "" then
 		header_str = header_str:gsub("\r", "")
 	end
+
+	luci.sys.call('rm -f "%s"' % cookie_file)
 
 	return return_code, http_code, header_str
 end
@@ -2102,14 +2107,9 @@ local function update_node(manual)
 
 	uci_save(true)
 
-	if arg[3] == "cron" then
-		if not fs.access(api.LOCK_PREFIX .. ".lock") then
-			luci.sys.call("touch %s_cron.lock" % api.LOCK_PREFIX)
-		end
-	end
-
+	local action = (arg[3] == "cron") and " cron" or ""
 	if manual ~= 1 then
-		luci.sys.call("/etc/init.d/passwall restart > /dev/null 2>&1 &")
+		luci.sys.call("/etc/init.d/passwall restart%s > /dev/null 2>&1 &" % action)
 	end
 end
 
@@ -2255,7 +2255,7 @@ local execute = function()
 					f:close()
 					local raw_data = api.trim(stdout)
 					local old_md5 = value.md5 or ""
-					local new_md5 = luci.sys.exec("md5sum " .. tmp_file .. " 2>/dev/null | awk '{print $1}'"):gsub("\n", "")
+					local new_md5 = luci.sys.exec("md5sum " .. tmp_file .. " 2>/dev/null | awk '{printf \"%s\", $1}'")
 					if not manual_sub and old_md5 == new_md5 then
 						log('订阅:【' .. remark .. '】没有变化，无需更新。')
 					else
